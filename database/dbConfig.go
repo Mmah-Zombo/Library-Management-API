@@ -18,6 +18,7 @@ func migrateTable() error {
 	if err != nil {
 		return err
 	}
+	log.Println("Models migrated successfully")
 	return nil
 }
 
@@ -32,6 +33,7 @@ func Init() (*gorm.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbUsr, dbPassword, dbHost, dbPort, dbName)
 
 	var err error
+	log.Println("Connecting to database.....")
 	Db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 	if err != nil {
