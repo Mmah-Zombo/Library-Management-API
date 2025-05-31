@@ -12,7 +12,7 @@ func setupRoute(app *fiber.App) {
 		api.Get("/books", book.GetBooks)
 		api.Get("/books/:id", book.GetBook)
 		api.Post("/books", book.NewBook)
-		api.Put("/books", book.UpdateBook)
+		api.Put("/books/:id", book.UpdateBook)
 		api.Delete("/books/:id", book.DeleteBook)
 	})
 }

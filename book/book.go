@@ -61,7 +61,25 @@ func NewBook(c *fiber.Ctx) error {
 }
 
 func DeleteBook(c *fiber.Ctx) error {
-	return c.SendString("Deletes A Book")
+	bookID, err := c.ParamsInt("id")
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	var book database.Book
+
+	if result := database.Db.Delete(&book, bookID); result.Error != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": result.Error.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"bookId":  bookID,
+		"message": "Deleted book",
+	})
 }
 
 func UpdateBook(c *fiber.Ctx) error {
