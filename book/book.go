@@ -1,6 +1,7 @@
 package book
 
 import (
+	"fmt"
 	"go-fiber-api/database"
 	"time"
 
@@ -39,7 +40,7 @@ func GetBook(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusFound).JSON(book)
 }
 
-func NewBook(c *fiber.Ctx) error {
+func AddBook(c *fiber.Ctx) error {
 	var book database.Book
 
 	if err := c.BodyParser(&book); err != nil {
@@ -71,7 +72,16 @@ func DeleteBook(c *fiber.Ctx) error {
 
 	var book database.Book
 
-	if result := database.Db.Delete(&book, bookID); result.Error != nil {
+	result := database.Db.First(&book, bookID)
+
+	if result.Error != nil {
+		errMessage := fmt.Sprintf("Book with ID: %d not found.", bookID)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": errMessage,
+		})
+	}
+
+	if result = database.Db.Delete(&book, bookID); result.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": result.Error.Error(),
 		})
