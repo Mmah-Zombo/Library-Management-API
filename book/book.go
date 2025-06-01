@@ -93,5 +93,43 @@ func DeleteBook(c *fiber.Ctx) error {
 }
 
 func UpdateBook(c *fiber.Ctx) error {
-	return c.SendString("Updates A Book")
+	bookID, err := c.ParamsInt("id")
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	var updateData map[string]interface{}
+
+	if err = c.BodyParser(&updateData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"errror": "Invalid JSON",
+		})
+	}
+
+	var book database.Book
+
+	result := database.Db.First(&book, bookID)
+
+	if result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("Book with ID: %d not found.", bookID),
+		})
+	}
+
+	result = database.Db.Model(&book).Updates(updateData)
+
+	if result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Failed to update book",
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"status":  "Success",
+		"message": fmt.Sprintf("Book with ID: %d updated", bookID),
+		"data":    book,
+	})
 }
