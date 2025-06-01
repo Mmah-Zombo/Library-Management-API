@@ -119,11 +119,23 @@ func UpdateBook(c *fiber.Ctx) error {
 		})
 	}
 
+	if dateStr, ok := updateData["publish_date"].(string); ok {
+		date, err := time.Parse(time.RFC3339, dateStr)
+		if err != nil {
+			date, err = time.Parse("2006-01-02 15:04:05", dateStr)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "Invalid date format for publish_date",
+				})
+			}
+		}
+		updateData["publish_date"] = date
+	}
 	result = database.Db.Model(&book).Updates(updateData)
 
 	if result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Failed to update book",
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": result.Error.Error(),
 		})
 	}
 
