@@ -13,11 +13,17 @@ func GetBooks(c *fiber.Ctx) error {
 	result := database.Db.Find(&books)
 
 	if result.Error != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": result.Error.Error(),
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   result.Error.Error(),
+			"message": "Could not fetch books",
+			"data":    nil,
 		})
 	}
-	return c.Status(fiber.StatusOK).JSON(books)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"error":   nil,
+		"message": "All books fetched successfully",
+		"data":    books,
+	})
 }
 
 func GetBook(c *fiber.Ctx) error {
@@ -26,7 +32,9 @@ func GetBook(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Integer expected for book ID, got string: " + c.Params("id"),
+			"error":   err.Error(),
+			"message": "Integer expected for book ID, got string: " + c.Params("id"),
+			"data":    nil,
 		})
 	}
 
@@ -34,10 +42,16 @@ func GetBook(c *fiber.Ctx) error {
 
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": result.Error.Error(),
+			"error":   result.Error.Error(),
+			"message": "No book with ID: " + c.Params("id"),
+			"data":    nil,
 		})
 	}
-	return c.Status(fiber.StatusFound).JSON(book)
+	return c.Status(fiber.StatusFound).JSON(fiber.Map{
+		"error":   nil,
+		"message": fmt.Sprintf("Book with ID %s found", c.Params("id")),
+		"data":    book,
+	})
 }
 
 func AddBook(c *fiber.Ctx) error {
@@ -45,7 +59,9 @@ func AddBook(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&book); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
+			"error":   err.Error(),
+			"message": "Invalid request data",
+			"data":    nil,
 		})
 	}
 
@@ -54,11 +70,17 @@ func AddBook(c *fiber.Ctx) error {
 
 	if result := database.Db.Create(&book); result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to add book",
+			"error":   result.Error.Error(),
+			"message": "Failed to add book",
+			"data":    nil,
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(book)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"error":   nil,
+		"message": fmt.Sprintf("Book with title: '%s' sucessfully added", book.Title),
+		"data":    book,
+	})
 }
 
 func DeleteBook(c *fiber.Ctx) error {
@@ -66,7 +88,9 @@ func DeleteBook(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
+			"error":   err.Error(),
+			"message": "Integer expected for book ID, got string: " + c.Params("id"),
+			"data":    nil,
 		})
 	}
 
@@ -75,20 +99,24 @@ func DeleteBook(c *fiber.Ctx) error {
 	result := database.Db.First(&book, bookID)
 
 	if result.Error != nil {
-		errMessage := fmt.Sprintf("Book with ID: %d not found.", bookID)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": errMessage,
+			"error":   result.Error.Error(),
+			"message": fmt.Sprintf("Book with ID: %d not found.", bookID),
+			"data":    nil,
 		})
 	}
 
 	if result = database.Db.Delete(&book, bookID); result.Error != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": result.Error.Error(),
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   result.Error.Error(),
+			"message": "Failed to delete book",
+			"data":    nil,
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"bookId":  bookID,
-		"message": "Deleted book",
+		"error":   nil,
+		"message": fmt.Sprintf("Book with ID '%d' deleted", bookID),
+		"data":    nil,
 	})
 }
 
@@ -97,7 +125,9 @@ func UpdateBook(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
+			"error":   err.Error(),
+			"message": "Integer expected for book ID, got string: " + c.Params("id"),
+			"data":    nil,
 		})
 	}
 
@@ -105,7 +135,9 @@ func UpdateBook(c *fiber.Ctx) error {
 
 	if err = c.BodyParser(&updateData); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"errror": "Invalid JSON",
+			"errror":  err.Error(),
+			"message": "Invalid request data",
+			"data":    nil,
 		})
 	}
 
@@ -115,32 +147,36 @@ func UpdateBook(c *fiber.Ctx) error {
 
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": fmt.Sprintf("Book with ID: %d not found.", bookID),
+			"error":   result.Error.Error(),
+			"message": fmt.Sprintf("Book with ID: %d not found.", bookID),
+			"data":    nil,
 		})
 	}
 
 	if dateStr, ok := updateData["publish_date"].(string); ok {
 		date, err := time.Parse(time.RFC3339, dateStr)
 		if err != nil {
-			date, err = time.Parse("2006-01-02 15:04:05", dateStr)
-			if err != nil {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"error": "Invalid date format for publish_date",
-				})
-			}
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Invalid date format for publish_date",
+				"data":    nil,
+			})
 		}
+
 		updateData["publish_date"] = date
 	}
 	result = database.Db.Model(&book).Updates(updateData)
 
 	if result.Error != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": result.Error.Error(),
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   result.Error.Error(),
+			"message": "Failed to update book",
+			"data":    nil,
 		})
 	}
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"status":  "Success",
+		"error":   nil,
 		"message": fmt.Sprintf("Book with ID: %d updated", bookID),
 		"data":    book,
 	})
